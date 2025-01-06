@@ -49,8 +49,8 @@ void IRCServer::handle_read(shared_ptr<boost::asio::ip::tcp::socket> clientSocke
     if (!error)
     {
         buffer->resize(bytesTransferred);
-        string message = m_clients[clientSocket] + ": " + *buffer;
-        cout << message << endl;
+        string message = m_clients[clientSocket] + ": " + *buffer + "\r\n";
+        cout << message;
 
         broadcast_message(message, clientSocket);
 
