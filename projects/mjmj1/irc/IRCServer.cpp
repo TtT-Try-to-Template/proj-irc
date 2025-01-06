@@ -20,55 +20,55 @@ void IRCServer::accept_clients()
 
 void IRCServer::handle_client(shared_ptr<boost::asio::ip::tcp::socket> clientSocket, const boost::system::error_code& error)
 {
-    if (!error)
+    if (error)
     {
-        string clientID = "Client" + to_string(reinterpret_cast<uintptr_t>(clientSocket.get()));
-        m_clients[clientSocket] = clientID;
+        printf("Accept failed : %s\n", error.message().c_str());
+        return;
+    }
 
-        cout << clientID << " connected." << endl;
+    string clientID = "Client" + to_string(reinterpret_cast<uintptr_t>(clientSocket.get()));
+    m_clients[clientSocket] = clientID;
 
-        auto welcomeMessage = std::make_shared<std::string>("Welcome to the IRC Server, " + clientID + "!\n");
-        boost::asio::async_write(*clientSocket, boost::asio::buffer(*welcomeMessage),
-            [this, clientSocket, welcomeMessage](const boost::system::error_code&, size_t) {});
+    printf("%s connected\n", clientID.c_str());
 
-        auto buffer = make_shared<std::string>(1024, '\0');
-        clientSocket->async_read_some(boost::asio::buffer(*buffer),
-            boost::bind(&IRCServer::handle_read, this, clientSocket, buffer,
-                boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+    auto welcomeMessage = std::make_shared<std::string>("Welcome to the IRC Server, " + clientID + "!\n");
+    boost::asio::async_write(*clientSocket, boost::asio::buffer(*welcomeMessage),
+        [this, clientSocket, welcomeMessage](const boost::system::error_code&, size_t) {});
+
+    auto buffer = make_shared<std::string>(1024, '\0');
+    clientSocket->async_read_some(boost::asio::buffer(*buffer),
+        boost::bind(&IRCServer::handle_read, this, clientSocket, buffer,
+            boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
         
-        accept_clients();
-    }
-    else
-    {
-        std::cerr << "Accept failed: " << error.message() << std::endl;
-    }
+    accept_clients();
 }
 
 void IRCServer::handle_read(shared_ptr<boost::asio::ip::tcp::socket> clientSocket, shared_ptr<string> buffer, const boost::system::error_code& error, size_t bytesTransferred)
 {
-    if (!error)
-    {
-        buffer->resize(bytesTransferred);
-        string message = m_clients[clientSocket] + ": " + *buffer + "\r\n";
-        cout << message;
-
-        broadcast_message(message, clientSocket);
-
-        buffer->resize(1024, '\0');
-        clientSocket->async_read_some(boost::asio::buffer(*buffer),
-            boost::bind(&IRCServer::handle_read, this, clientSocket, buffer,
-                boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
-    }
-    else
+    if (error)
     {
         if (error != boost::asio::error::eof)
         {
-            cerr << "read error: " << error.message() << endl;
+            printf("read error: %s\n", error.message().c_str());
         }
 
-        cout << m_clients[clientSocket] << " disconnected." << endl;
+        printf("%s disconnected\n", m_clients[clientSocket].c_str());
+
         m_clients.erase(clientSocket);
+
+        return;
     }
+
+    buffer->resize(bytesTransferred);
+    string message = m_clients[clientSocket] + ": " + *buffer + "\r\n";
+    cout << message;
+
+    broadcast_message(message, clientSocket);
+
+    buffer->resize(1024, '\0');
+    clientSocket->async_read_some(boost::asio::buffer(*buffer),
+        boost::bind(&IRCServer::handle_read, this, clientSocket, buffer,
+            boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
 void IRCServer::broadcast_message(const string& message, shared_ptr<boost::asio::ip::tcp::socket> sender)
