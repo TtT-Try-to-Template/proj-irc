@@ -189,6 +189,7 @@ public class ChannelReceiver extends Thread {
     private void closeResources() {
         try {
             System.out.println("[" + socket.getInetAddress() + "/" + socket.getPort() + "] has left");
+            channelManager.unregisterNickname(nickname);
             if (outputStream != null) outputStream.close();
             if (inputStream != null) inputStream.close();
             if (!socket.isClosed()) socket.close();

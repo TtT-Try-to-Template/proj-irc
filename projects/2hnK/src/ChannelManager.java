@@ -59,15 +59,13 @@ public class ChannelManager {
     }
 
     public synchronized void whisper(String from, String to, String content, ChannelReceiver channelReceiver) {
-
-
-        if (!users.containsKey("from")) {
+        if (!users.containsKey(from)) {
             channelReceiver.sendToClient("User '" + from + "' does not exist.");
         }
-        if (!users.containsKey("to")) {
-                channelReceiver.sendToClient("User '" + to + "' does not exist.");
+        if (!users.containsKey(to)) {
+            channelReceiver.sendToClient("User '" + to + "' does not exist.");
         }
-        if (users.containsKey("to") && !users.containsKey("from")) {
+        if (users.containsKey(to) && users.containsKey(from)) {
             try {
                 DataOutputStream outReceiver = users.get(to);
                 outReceiver.writeUTF("[Whisper from " + to + "]  " + content);
